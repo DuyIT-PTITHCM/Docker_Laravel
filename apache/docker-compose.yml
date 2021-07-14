@@ -1,0 +1,68 @@
+version: '3'
+networks:
+    app-network: null
+services:
+    web-httpd:
+        container_name: c-httpd-web
+        image: 'httpd:2.4.43'
+        hostname: h-php-web
+        restart: always
+        depends_on:
+            - php
+            - postgres
+        networks:
+            - app-network
+        volumes:
+            - './src:/var/www/html/'
+            - ./httpd/httpd.conf:/usr/local/apache2/conf/httpd.conf
+        ports:
+            - "8080:80"
+    php:
+        build: php
+        container_name: c-php-web
+        restart: always
+        volumes:
+            - ./php/php.ini:/usr/local/etc/php/conf.d/php.ini
+            #- ./.docker/conf/php/xdebug.ini:/usr/local/etc/php/conf.d/xdebug.ini
+            - './src:/var/www/html/'
+        networks:
+            - app-network
+        hostname: h-php-web
+        working_dir: /var/www/html
+    composer:
+        image: composer
+        volumes:
+            - './src:/var/www/html/'
+        command: install
+        working_dir: /var/www/html
+        networks:
+            - app-network
+    npm:
+        image: 'node:13.7'
+        container_name: 'npm'
+        volumes:
+            - './src:/var/www/html/'
+        working_dir: /var/www/html
+        entrypoint:
+            - npm
+    postgres:
+        image: postgres:10.1
+        restart: always
+        environment:
+            - POSTGRES_DB=${DB_NAME}
+            - POSTGRES_USER=${DB_USER}
+            - POSTGRES_PASSWORD=${DB_PASSWORD}
+        ports:
+            - 5438:5432
+        volumes:
+            - ./database/:/docker-entrypoint-initdb.d/
+        networks:
+            - app-network
+    # Cron tasks
+    # supervisord:
+    #     <<: *laravel-template
+    #     container_name: ${COMPOSE_PROJECT_NAME}_supervisord
+    #     expose: []
+    #     ports: []
+    #     command: ["/usr/bin/supervisord"]
+        
